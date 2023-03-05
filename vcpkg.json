@@ -1,0 +1,18 @@
+{
+  "name" : "memoryerror",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "223d33be7d3ec6c3d64381ca37f501b8c87dda6a",
+  "dependencies" : [ {
+    "name" : "opengl",
+    "version>=" : "2022-12-04#1"
+  }, {
+    "name" : "opengl-registry",
+    "version>=" : "2022-09-29"
+  }, {
+    "name" : "glew",
+    "version>=" : "2.2.0"
+  }, {
+    "name" : "glfw3",
+    "version>=" : "3.3.8#2"
+  } ]
+}
